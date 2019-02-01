@@ -19,6 +19,9 @@ class Camera(threading.Thread):
     def run(self):
         self.start_camera()
 
+    def close(self):
+        self.stop_camera()
+
     def start_camera(self):
         while self.running:
             self.ret, self.frame = self.cap.read()

@@ -1,9 +1,10 @@
 import argparse
-import time
+import time, sys, signal
 
 from Camera import Camera
 from SocketCallback import SocketCallback
 
+main_running = True
 
 class listener:
     def __init__(self, working_mode, ip, port):
@@ -11,17 +12,25 @@ class listener:
         self.ip = ip
         # TODO check port if multiple drones are connected
         self.port = port
-        command_socket = SocketCallback(self.ip, self.port)
-        command_socket.add_callback(self.handle_command)
-        command_socket.start()
+        self.command_socket = SocketCallback(self.ip, self.port)
+        self.command_socket.add_callback(self.handle_command)
+        self.command_socket.start()
         self.cam = Camera(working_mode)
+
+    def close(self):
+        print("closing python listener")
+        self.command_socket.close()
+        self.cam.close()
+        global main_running
+        main_running = False
+        exit(0)
 
     def handle_command(self, sock, data):
         # decode the data and remove \r\n
         # TODO try to use getattribute to clean the code.
         # getattr(Camera, "foo")()
         command = data.decode().rstrip()
-        print(command)
+        print("getting command: " + command)
         success = False
         if command == 'start_camera':
             self.cam.start()
@@ -32,6 +41,9 @@ class listener:
         elif command == 'find_target':
             self.cam.find_target()
             success = True
+        elif command == 'exit':
+            sock.send("ACK\n".encode())
+            self.close()
         else:
             success = False
 
@@ -54,6 +66,9 @@ if __name__ == "__main__":
 
     print("start python listener")
     print("working mode: " + working_mode)
-    t = listener(working_mode, ip, port)
-    while True:
-        time.sleep(100)
+    print("ip address: " + ip)
+    print("port: " + str(port))
+    listener = listener(working_mode, ip, port)
+
+    while main_running:
+        time.sleep(1)
