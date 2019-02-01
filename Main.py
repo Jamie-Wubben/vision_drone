@@ -6,7 +6,7 @@ from SocketCallback import SocketCallback
 
 
 class listener:
-    def __init__(self,working_mode,ip,port):
+    def __init__(self, working_mode, ip, port):
         self.working_mode = working_mode
         self.ip = ip
         # TODO check port if multiple drones are connected
@@ -44,7 +44,7 @@ class listener:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--working_mode", help="choice working mode <pc or pi>")
-    parser.add_argument("-i", "--ip",help="ip address of host for socket with java")
+    parser.add_argument("-i", "--ip", help="ip address of host for socket with java")
     parser.add_argument("-p", "--port", help="port for socket with java")
     args = parser.parse_args()
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     ip = "localhost" if not args.ip else args.ip
 
     print("start python listener")
-    print("working mode: "+ working_mode)
-    t = listener(working_mode,ip,port)
+    print("working mode: " + working_mode)
+    t = listener(working_mode, ip, port)
     while True:
         time.sleep(100)
