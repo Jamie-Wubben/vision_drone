@@ -15,12 +15,15 @@ class Camera(threading.Thread):
         self.running = True
         self.ret = None
         self.frame = None
+        self.markerLength = 0.25 #length of real marker in meters
 
     def run(self):
         self.start_camera()
 
     def close(self):
         self.stop_camera()
+        self.cap.release()
+        cv2.destroyAllWindows()
 
     def start_camera(self):
         while self.running:
@@ -28,9 +31,6 @@ class Camera(threading.Thread):
             cv2.imshow('frame', self.frame)
             if cv2.waitKey(20) & 0xFF == ord('q'):
                 break
-
-        self.cap.release()
-        cv2.destroyAllWindows()
 
     def stop_camera(self):
         self.running = False
@@ -46,3 +46,15 @@ class Camera(threading.Thread):
 
             gray = aruco.drawDetectedMarkers(gray, corners)
             cv2.imshow('detected', gray)
+            if cv2.waitKey(20) & 0xFF == ord('q'):
+                break
+
+            if corners:
+                print("corners")
+                print(corners)
+                print("ids")
+                print(ids)
+
+                target_found = True
+
+

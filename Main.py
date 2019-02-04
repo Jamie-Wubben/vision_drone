@@ -50,7 +50,7 @@ class listener:
         if success:
             sock.send("ACK\n".encode())
         else:
-            sock.send("ACK\n".encode())
+            sock.send("NACK\n".encode())
 
 
 if __name__ == "__main__":
