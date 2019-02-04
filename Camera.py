@@ -4,7 +4,7 @@ import threading
 
 
 class Camera(threading.Thread):
-    def __init__(self,working_mode):
+    def __init__(self, working_mode):
         threading.Thread.__init__(self)
         if working_mode == "pi":
             os.system('sudo modprobe bcm2835-v4l2')
@@ -15,7 +15,7 @@ class Camera(threading.Thread):
         self.running = True
         self.ret = None
         self.frame = None
-        self.markerLength = 0.25 #length of real marker in meters
+        self.markerLength = 0.25  # length of real marker in meters
 
     def run(self):
         self.start_camera()
@@ -54,7 +54,11 @@ class Camera(threading.Thread):
                 print(corners)
                 print("ids")
                 print(ids)
-
+                camera_matrix = [[555.25002546, 0., 255.24349188], [0., 557.92461715, 273.10908953], [0., 0., 1.]]
+                dist_coeffs = [[2.24271864e+00, -1.75524841e+01, -2.02023682e-02, -5.08466811e-02, 3.51847199e+01]]
+                rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, self.markerLength, camera_matrix, dist_coeffs)
+                print("rvec")
+                print(rvec)
+                print("tvec")
+                print(tvec)
                 target_found = True
-
-
