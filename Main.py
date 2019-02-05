@@ -46,7 +46,6 @@ class listener:
                 sock.send("FOUND\n".encode())
             else:
                 sock.send("NOT_FOUND\n".encode())
-
         elif command == 'exit':
             sock.send("ACK\n".encode())
             self.close()
