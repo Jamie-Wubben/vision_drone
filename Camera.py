@@ -1,10 +1,14 @@
 import cv2, time, os
 import cv2.aruco as aruco
 import threading
+import numpy as np
+
+import yaml
 
 
 class Camera(threading.Thread):
     def __init__(self, working_mode):
+        global calibration
         threading.Thread.__init__(self)
         if working_mode == "pi":
             os.system('sudo modprobe bcm2835-v4l2')
@@ -12,6 +16,16 @@ class Camera(threading.Thread):
             time.sleep(0.1)
         else:
             self.cap = cv2.VideoCapture(0)
+
+        try:
+            with open("Calibration/calibration.yaml", 'r') as stream:
+                calibration = yaml.load(stream)
+        except FileNotFoundError or yaml.YAMLError:
+            print("Not able to open calibration.yaml please calibrate the camera first.")
+            # TODO close program if file not found
+
+        self.cameraDistortion = np.array(calibration.get('dist_coeff')[0])  # TODO fix [0]
+        self.cameraMatrix = np.array(calibration.get('camera_matrix'))
         self.running = True
         self.ret = None
         self.frame = None
@@ -36,29 +50,26 @@ class Camera(threading.Thread):
         self.running = False
 
     def find_target(self):
-        target_found = False
-        while self.running or not target_found:
+        while self.running:
             gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
-            parameters = aruco.DetectorParameters_create()
 
-            corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-
-            gray = aruco.drawDetectedMarkers(gray, corners)
-            cv2.imshow('detected', gray)
-            if cv2.waitKey(20) & 0xFF == ord('q'):
-                break
+            corners, ids, rejectedImgPoints = aruco.detectMarkers(image=gray, dictionary=aruco_dict,
+                                                                  cameraMatrix=self.cameraMatrix,
+                                                                  distCoeff=self.cameraDistortion)
+            # gray = aruco.drawDetectedMarkers(gray, corners)
+            # if cv2.waitKey(20) & 0xFF == ord('q'):
+            # break
 
             if corners:
-                print("corners")
-                print(corners)
-                print("ids")
-                print(ids)
-                camera_matrix = [[555.25002546, 0., 255.24349188], [0., 557.92461715, 273.10908953], [0., 0., 1.]]
-                dist_coeffs = [[2.24271864e+00, -1.75524841e+01, -2.02023682e-02, -5.08466811e-02, 3.51847199e+01]]
-                rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, self.markerLength, camera_matrix, dist_coeffs)
+                ret = aruco.estimatePoseSingleMarkers(corners, self.markerLength,
+                                                      self.cameraMatrix,
+                                                      self.cameraDistortion)
+                rvec, tvec = ret[0][0, 0, :], ret[1][0, 0, :]
                 print("rvec")
                 print(rvec)
                 print("tvec")
                 print(tvec)
-                target_found = True
+                break
+
+        return True

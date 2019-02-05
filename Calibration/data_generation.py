@@ -5,6 +5,7 @@
 4. Press 'q' to quit.
 '''
 
+# TODO make this program more robust
 import cv2
 
 camera = cv2.VideoCapture(0)

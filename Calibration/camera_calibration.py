@@ -2,7 +2,7 @@
 This code assumes that images used for calibration are of the same arUco marker board provided with code
 
 """
-
+# TODO make this program more robust
 import cv2
 from cv2 import aruco
 import yaml

@@ -31,24 +31,25 @@ class listener:
         # getattr(Camera, "foo")()
         command = data.decode().rstrip()
         print("getting command: " + command)
-        success = False
         if command == 'start_camera':
             self.cam.start()
-            success = True
+            sock.send("ACK\n".encode())
         elif command == 'stop_camera':
             self.cam.stop_camera()
-            success = True
+            sock.send("ACK\n".encode())
         elif command == 'find_target':
-            self.cam.find_target()
-            success = True
+            sock.send("ACK\n".encode())
+            found = self.cam.find_target()
+            # TODO fix when camera does not find target immediatly, program does not receive any messages anymore
+            if found:
+                print("send found")
+                sock.send("FOUND\n".encode())
+            else:
+                sock.send("NOT_FOUND\n".encode())
+
         elif command == 'exit':
             sock.send("ACK\n".encode())
             self.close()
-        else:
-            success = False
-
-        if success:
-            sock.send("ACK\n".encode())
         else:
             sock.send("NACK\n".encode())
 
