@@ -1,3 +1,4 @@
+from Camera import Camera
 import argparse
 import time, sys, signal,os
 from SocketCallback import SocketCallback
@@ -13,8 +14,6 @@ class listener:
         self.command_socket = SocketCallback(self.ip, self.port)
         self.command_socket.add_callback(self.handle_command)
         self.command_socket.start()
-        # import here so that it doesn`t import opencv at startup
-        from Camera import Camera
         self.cam = Camera(working_mode)
 
     def close(self):
@@ -68,8 +67,6 @@ if __name__ == "__main__":
     print("working mode: " + working_mode)
     print("ip address: " + ip)
     print("port: " + str(port))
-    if working_mode == "pi":
-        os.system('workon cv')
     listener = listener(working_mode, ip, port)
 
     while main_running:
