@@ -1,5 +1,6 @@
-import cv2, time, os
+import cv2
 import cv2.aruco as aruco
+import time, os
 import threading
 import numpy as np
 import yaml

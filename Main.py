@@ -1,7 +1,5 @@
 import argparse
 import time, sys, signal,os
-
-from Camera import Camera
 from SocketCallback import SocketCallback
 
 main_running = True
@@ -15,6 +13,8 @@ class listener:
         self.command_socket = SocketCallback(self.ip, self.port)
         self.command_socket.add_callback(self.handle_command)
         self.command_socket.start()
+        # import here so that it doesn`t import opencv at startup
+        from Camera import Camera
         self.cam = Camera(working_mode)
 
     def close(self):
