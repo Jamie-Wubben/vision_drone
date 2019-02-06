@@ -20,7 +20,12 @@ class Camera(threading.Thread):
 
         # for recording
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        self.out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))
+        dir_name = "./FlightMovies"
+        counter = 0
+        for f in os.listdir(dir_name):
+            if os.path.isfile(f):
+                counter += 1
+        self.out = cv2.VideoWriter(dir_name + "/video" + str(counter) + ".avi", fourcc, 20.0, (640, 480))
 
         # use calibration matrix to be able to estimate pose
         try:
