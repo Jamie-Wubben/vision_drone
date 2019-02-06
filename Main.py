@@ -1,5 +1,5 @@
 import argparse
-import time, sys, signal
+import time, sys, signal,os
 
 from Camera import Camera
 from SocketCallback import SocketCallback
@@ -68,6 +68,8 @@ if __name__ == "__main__":
     print("working mode: " + working_mode)
     print("ip address: " + ip)
     print("port: " + str(port))
+    if working_mode == "pi":
+        os.system('workon cv')
     listener = listener(working_mode, ip, port)
 
     while main_running:
