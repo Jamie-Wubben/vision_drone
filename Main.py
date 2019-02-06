@@ -60,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--port", help="port for socket with java")
     args = parser.parse_args()
 
-    working_mode = "pc" if not args.working_mode else args.working_mode
+    working_mode = "pi" if not args.working_mode else args.working_mode
     port = 5761 if not args.port else int(args.port)
     ip = "localhost" if not args.ip else args.ip
 
