@@ -4,12 +4,13 @@ import time, os
 import threading
 import numpy as np
 import yaml
-import pickle
+import Logger as log
 
 
 class Camera(threading.Thread):
+    logger = log.logger
     def __init__(self, working_mode):
-        global calibration
+        self.logger.info("Init camera")
         threading.Thread.__init__(self)
         # if pi run modprobe to be able to acces the picam
         if working_mode == "pi":
@@ -29,11 +30,13 @@ class Camera(threading.Thread):
         self.out = cv2.VideoWriter(dir_name + "/video" + str(counter) + ".avi", fourcc, 20.0, (640, 480))
 
         # use calibration matrix to be able to estimate pose
+        global calibration
         try:
             with open("Calibration/calibration.yaml", 'r') as stream:
                 calibration = yaml.load(stream)
+            self.logger.info("Calibration file found and loaded")
         except FileNotFoundError or yaml.YAMLError:
-            print("Not able to open calibration.yaml please calibrate the camera first.")
+            self.logger.error("Calibration file not found error.")
             # TODO close program if file not found
         self.cameraDistortion = np.array(calibration.get('dist_coeff')[0])  # TODO fix [0]
         self.cameraMatrix = np.array(calibration.get('camera_matrix'))
@@ -47,12 +50,14 @@ class Camera(threading.Thread):
         self.start_camera()
 
     def close(self):
+        self.logger.info("Closing...")
         self.stop_camera()
         self.cap.release()
         self.out.release()
         cv2.destroyAllWindows()
 
     def start_camera(self):
+        self.logger.info("Start camera and record.")
         while self.running:
             self.ret, self.frame = self.cap.read()
             # record and show the camerafeeds
@@ -65,9 +70,11 @@ class Camera(threading.Thread):
                 break
 
     def stop_camera(self):
+        self.logger.info("Stop camera.")
         self.running = False
 
     def find_target(self):
+        self.logger.info("Searching for target")
         while self.running:
             gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
@@ -80,6 +87,7 @@ class Camera(threading.Thread):
             # break
 
             if corners:
+                self.logger.info("Target found.")
                 ret = aruco.estimatePoseSingleMarkers(corners, self.markerLength,
                                                       self.cameraMatrix,
                                                       self.cameraDistortion)
