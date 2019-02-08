@@ -1,3 +1,5 @@
+import warnings
+
 from Camera import Camera
 import argparse
 import time, sys, signal, os
@@ -22,6 +24,7 @@ class listener:
         self.command_socket.add_callback(self.handle_command)
         self.command_socket.start()
         self.cam = Camera(working_mode)
+        self.alreadyBooted = False
 
     def close(self):
         self.logger.info("closing listener")
@@ -33,37 +36,18 @@ class listener:
 
     def handle_command(self, sock, data):
         # decode the data and remove \r\n
-        # TODO try to use getattribute to clean the code.
-        # getattr(Camera, "foo")()
         command = data.decode().rstrip()
-        self.logger.info("getting command: "+ command)
-        if command == 'start_camera':
-            self.cam.start()
+        self.logger.info("getting command: " + command)
+        success = self.cam.process_command(command)
+        if success == 1:
             sock.send("ACK\n".encode())
-            self.logger.info("ACK")
-        elif command == 'stop_camera':
-            self.cam.stop_camera()
-            sock.send("ACK\n".encode())
-            self.logger.info("ACK")
-        elif command == 'find_target':
-            sock.send("ACK\n".encode())
-            self.logger.info("ACK")
-            found = self.cam.find_target()
-            # TODO fix when camera does not find target immediatly, program does not receive any messages anymore
-            if found:
-                print("send found")
-                sock.send("FOUND\n".encode())
-                self.logger.info("FOUND")
-            else:
-                sock.send("NOT_FOUND\n".encode())
-                self.logger.info("NOT FOUND")
-        elif command == 'exit':
-            sock.send("ACK\n".encode())
-            self.logger.info("ACK")
-            self.close()
-        else:
+            if command == 'exit':
+                self.close()
+        elif success == 0:
             sock.send("NACK\n".encode())
-            self.logger.info("NACK")
+        elif success == -1:
+            pass
+            # TODO do something when exception accours
 
 
 if __name__ == "__main__":
