@@ -2,7 +2,7 @@ import warnings
 
 from Camera import Camera
 import argparse
-import time, sys, signal, os
+import time
 from SocketCallback import SocketCallback
 import Logger as log
 

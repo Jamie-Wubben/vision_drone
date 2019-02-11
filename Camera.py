@@ -1,10 +1,13 @@
+import _thread
+import os
+import time
+
 import cv2
 import cv2.aruco as aruco
-import time, os
 import numpy as np
 import yaml
+
 import Logger as log
-import _thread
 
 
 class Camera:
