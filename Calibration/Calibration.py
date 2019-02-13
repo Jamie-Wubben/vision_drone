@@ -82,6 +82,7 @@ def read_chessboards(images):
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.00001)
 
     for im in images:
+        print("=> Processing image {0}".format(im))
         frame = cv2.imread(im)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict)
@@ -187,7 +188,7 @@ if __name__ == "__main__":
     messagebox.showinfo("calibration", "Now the camera will be calibrated.\n"
                                        "Calibration files will be stored in: " + path + "/camera_matrix.txt and "
                                                                                         "distortion.txt."
-                                       "This may take a will so please be patient.")
+                                       "This may take a while so please be patient.")
     allCorners, allIds, imsize = read_chessboards(images)
     ret, camera_matrix, distortion, rvecs, tvecs = calibrate_camera(allCorners, allIds, imsize)
     np.savetxt('camera_matrix.txt', camera_matrix)
