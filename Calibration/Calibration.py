@@ -1,5 +1,7 @@
+# information based on https://mecaruco2.readthedocs.io/en/latest/notebooks_rst/Aruco/sandbox/ludovic/aruco_calibration_rotation.html
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import messagebox
 import os
 import cv2
 from cv2 import aruco
@@ -11,6 +13,17 @@ aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
 # squaresX, squaresY, squareLength, markerLength, dictionary
 board = aruco.CharucoBoard_create(4, 4, 0.05, 0.04, aruco_dict)
 font = cv2.FONT_HERSHEY_PLAIN
+
+
+def makeMarker(path):
+    id = 1
+    aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+    img = aruco.drawMarker(aruco_dict, id, 600)
+    fig = plt.figure()
+    plt.imshow(img, cmap='gray')
+    plt.axis("off")
+    plt.savefig(path + "/marker" + str(id) + ".pdf")
+    plt.show()
 
 
 def makeBoard(path):
@@ -44,6 +57,8 @@ def makePictures(path):
     while True:
         name = path + "/picture" + str(count) + ".jpg"
         ret, img = camera.read()
+        cv2.putText(img, "Press c to take picture.", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.putText(img, "Press q to quit.", (10, 50), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
         cv2.imshow("img", img)
         key = cv2.waitKey(1)
         if key == 99:
@@ -58,7 +73,6 @@ def makePictures(path):
 
 def read_chessboards(images):
     """Charuco base pose estimation."""
-    print("POSE ESTIMATION STARTS:")
     allCorners = []
     allIds = []
     decimator = 0
@@ -66,7 +80,6 @@ def read_chessboards(images):
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.00001)
 
     for im in images:
-        print("=> Processing image {0}".format(im))
         frame = cv2.imread(im)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict)
@@ -126,8 +139,11 @@ def checkResults(images):
             rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, camera_matrix, distortion)
             cv2.putText(gray, str(tvecs[0][0]), (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
             cv2.putText(gray, str(rvecs[0][0]), (10, 50), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
             cv2.imshow("gray", gray)
         else:
+            cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
             cv2.imshow("gray", gray)
 
     camera.release()
@@ -138,20 +154,47 @@ if __name__ == "__main__":
     # choose path
     root = tk.Tk()
     root.withdraw()
+    messagebox.showinfo("Calibration", "The purpose of this program is to calibrate the camera\n"
+                                       "There are several steps, each one will be explained later\n")
 
+    answer = messagebox.askyesno("Raspberry pi", "Is this program running on a Raspberry pi")
+    print(answer)
+    # if pi run modprobe to be able to acces the picam
+    if answer:
+        os.system('sudo modprobe bcm2835-v4l2')
+
+    messagebox.showinfo("make board", "The first step is to make a calibration board\nPlease give a path to save the "
+                                      "board")
     pathEmpty = True
     path = None
     while pathEmpty:
         path = filedialog.askdirectory()
         pathEmpty = not os.path.exists(path)
 
-    # makeBoard(path)
-    # makePictures(path)
+    makeBoard(path)
+
+    messagebox.showinfo("print board", "The board is saved in: " + path + "/chessboard.jpg \nPlease print this board "
+                                       "\nNormally the squares have are 0.05m long and the markers 0.04m.\n"
+                                       "Check this and make sure the dimensions are the same.")
+
+    messagebox.showinfo("making pictures", "Now we will take some pictures of the chessboard.\n"
+                                           "Make sure that there is an webcam attached to your device.\n"
+                                           "Pictures will be save in the same directory as the chessboard.\n")
+    makePictures(path)
     # read pictures from given path
     images = np.array([path + "/" + f for f in os.listdir(path) if f.find("picture") is not -1])
 
+    messagebox.showinfo("calibration", "Now the camera will be calibrated.\n"
+                                       "Calibration files will be stored in: " + path + "/camera_matrix.txt and "
+                                                                                        "distortion.txt."
+                                       "This may take a will so please be patient.")
     allCorners, allIds, imsize = read_chessboards(images)
     ret, camera_matrix, distortion, rvecs, tvecs = calibrate_camera(allCorners, allIds, imsize)
     np.savetxt('camera_matrix.txt', camera_matrix)
     np.savetxt('distortion.txt', distortion)
+
+    makeMarker(path)
+    messagebox.showinfo("check results", "The calibration is complied.\n You can check the results by printing out "
+                                         "marker1.pdf Make sure this marker has a length of 0.185m and hold it before "
+                                         "the camera.")
     checkResults(images)
