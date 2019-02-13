@@ -15,7 +15,7 @@ board = aruco.CharucoBoard_create(4, 4, 0.05, 0.04, aruco_dict)
 font = cv2.FONT_HERSHEY_PLAIN
 
 
-def makeMarker(path):
+def makeMarker(path,verbose):
     id = 1
     aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
     img = aruco.drawMarker(aruco_dict, id, 600)
@@ -23,21 +23,23 @@ def makeMarker(path):
     plt.imshow(img, cmap='gray')
     plt.axis("off")
     plt.savefig(path + "/marker" + str(id) + ".pdf")
-    plt.show()
+    if verbose:
+        plt.show()
 
 
-def makeBoard(path):
+def makeBoard(path, verbose):
     """
     makes a CHARUCO chessboard that fits on a A4 paper shows it to the user and saves it in a directory
     :param path: path to save the chessboard
     """
     imboard = board.draw((2000, 2000))
     cv2.imwrite(path + "/chessboard.jpg", imboard)
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    plt.imshow(imboard, cmap='gray', interpolation="nearest")
-    ax.axis("off")
-    plt.show()
+    if verbose:
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        plt.imshow(imboard, cmap='gray', interpolation="nearest")
+        ax.axis("off")
+        plt.show()
 
 
 def makePictures(path):
@@ -169,7 +171,7 @@ if __name__ == "__main__":
         path = filedialog.askdirectory()
         pathEmpty = not os.path.exists(path)
 
-    makeBoard(path)
+    makeBoard(path,False)
 
     messagebox.showinfo("print board", "The board is saved in: " + path + "/chessboard.jpg \nPlease print this board "
                                        "\nNormally the squares have are 0.05m long and the markers 0.04m.\n"
@@ -191,7 +193,7 @@ if __name__ == "__main__":
     np.savetxt('camera_matrix.txt', camera_matrix)
     np.savetxt('distortion.txt', distortion)
 
-    makeMarker(path)
+    makeMarker(path,False)
     messagebox.showinfo("check results", "The calibration is complied.\n You can check the results by printing out "
                                          "marker1.pdf Make sure this marker has a length of 0.185m and hold it before "
                                          "the camera.")
