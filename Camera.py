@@ -24,15 +24,13 @@ class Camera:
         # use calibration matrix to be able to estimate pose
         global calibration
         try:
-            with open("Calibration/calibration.yaml", 'r') as stream:
-                calibration = yaml.load(stream)
-            self.logger.info("Calibration file found and loaded")
+            self.cameraDistortion = np.loadtxt('distortion.txt')
+            self.cameraMatrix = np.loadtxt('camera_matrix.txt')
         except FileNotFoundError or yaml.YAMLError:
             self.logger.error("Calibration file not found error.")
             # TODO close program if file not found
-        self.cameraDistortion = np.array(calibration.get('dist_coeff')[0])  # TODO fix [0]
-        self.cameraMatrix = np.array(calibration.get('camera_matrix'))
-        self.markerLength = 0.25  # length of real marker in meters
+
+        self.markerLength = 0.185  # length of real marker in meters
 
         self.running = True
         self.ret = None
