@@ -7,6 +7,7 @@ import cv2
 from cv2 import aruco
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 from PIL import Image
 
 aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
@@ -163,6 +164,7 @@ if __name__ == "__main__":
     # if pi run modprobe to be able to acces the picam
     if answer:
         os.system('sudo modprobe bcm2835-v4l2')
+        time.sleep(1)
 
     messagebox.showinfo("make board", "The first step is to make a calibration board\nPlease give a path to save the "
                                       "board")
