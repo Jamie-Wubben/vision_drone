@@ -100,7 +100,6 @@ def read_chessboards(images):
 
 def calibrate_camera(allCorners, allIds, imsize):
     """ Calibrates the camera using the dected corners."""
-    print("CAMERA CALIBRATION")
     cameraMatrixInit = np.array([[1000., 0., imsize[0] / 2.], [0., 1000., imsize[1] / 2.], [0., 0., 1.]])
     distCoeffsInit = np.zeros((5, 1))
     flags = (cv2.CALIB_USE_INTRINSIC_GUESS + cv2.CALIB_RATIONAL_MODEL + cv2.CALIB_FIX_ASPECT_RATIO)
@@ -158,7 +157,6 @@ if __name__ == "__main__":
                                        "There are several steps, each one will be explained later\n")
 
     answer = messagebox.askyesno("Raspberry pi", "Is this program running on a Raspberry pi")
-    print(answer)
     # if pi run modprobe to be able to acces the picam
     if answer:
         os.system('sudo modprobe bcm2835-v4l2')
