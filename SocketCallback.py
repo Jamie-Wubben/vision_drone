@@ -13,6 +13,9 @@ class SocketCallback(threading.Thread):
         self.callbacks = []
         self.running = True
 
+    def send(self, msg):
+        self.s.send(msg)
+
     def run(self):
         pair = None
         while self.running:

@@ -16,6 +16,7 @@ class listener:
     def __init__(self, working_mode, ip, port):
         self.logger.info("init listener")
         self.working_mode = working_mode
+
         self.ip = ip
         # TODO check port if multiple drones are connected
         self.port = port
@@ -23,6 +24,7 @@ class listener:
         self.command_socket = SocketCallback(self.ip, self.port)
         self.command_socket.add_callback(self.handle_command)
         self.command_socket.start()
+
         self.cam = Camera(working_mode)
         self.alreadyBooted = False
 
@@ -46,7 +48,7 @@ class listener:
         elif success == 0:
             sock.send("NACK\n".encode())
         elif success == -1:
-            pass
+            sock.send("NACK\n".encode())
             # TODO do something when exception accours
 
 

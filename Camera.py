@@ -2,12 +2,13 @@ import _thread
 import os
 import time
 
+import socket
 import cv2
 import cv2.aruco as aruco
 import numpy as np
-import yaml
 
 import Logger as log
+from SocketCallback import SocketCallback
 
 
 class Camera:
@@ -22,11 +23,10 @@ class Camera:
             time.sleep(0.1)
 
         # use calibration matrix to be able to estimate pose
-        global calibration
         try:
             self.cameraDistortion = np.loadtxt('distortion.txt')
             self.cameraMatrix = np.loadtxt('camera_matrix.txt')
-        except FileNotFoundError or yaml.YAMLError:
+        except FileNotFoundError:
             self.logger.error("Calibration file not found error.")
             # TODO close program if file not found
 
@@ -38,12 +38,7 @@ class Camera:
         self.out = None
         self.cap = None
 
-    def print_time(self, threadName, delay):
-        count = 0
-        while count < 5:
-            time.sleep(delay)
-            count += 1
-            print("%s: %s" % (threadName, time.ctime(time.time())))
+        # self.marker_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     """
     process command, takes command and starts the right method
@@ -63,7 +58,15 @@ class Camera:
         elif command == 'stop_camera':
             self.stop_camera()
         elif command == 'find_target':
-            found = self.find_target()
+            pass
+            """
+            try:
+                _thread.start_new_thread(self.find_target, ())
+            except Exception as e:
+                self.logger.warn("unable to start thread find_target")
+                self.logger.exception(e)
+                return -1
+            """
         elif command == 'exit':
             self.close()
         else:
@@ -111,27 +114,27 @@ class Camera:
         cv2.destroyAllWindows()
         self.out.release()
 
+    """
     def find_target(self):
-        self.logger.info("Searching for target")
-        while self.running:
-            gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-            aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+        self.marker_socket.connect(("localhost", 5764))
 
-            corners, ids, rejectedImgPoints = aruco.detectMarkers(image=gray, dictionary=aruco_dict,
-                                                                  cameraMatrix=self.cameraMatrix,
-                                                                  distCoeff=self.cameraDistortion)
-            # gray = aruco.drawDetectedMarkers(gray, corners)
-            # if cv2.waitKey(20) & 0xFF == ord('q'):
-            # break
+        # check to find target
 
-            if corners:
-                self.logger.info("Target found.")
-                ret = aruco.estimatePoseSingleMarkers(corners, self.markerLength,
-                                                      self.cameraMatrix,
-                                                      self.cameraDistortion)
-                # TODO ugly
-                rotation_vector, translation_vector = ret[0][0, 0, :], ret[1][0, 0, :]
+        # target found start descending
 
-                print(translation_vector)
+        # outside virtual boarder 2 move in xy plane
+        self.marker_socket.sendall("1100,1500,1500,1500\n".encode())
+        print("send messages move")
+        # inside virtual boarder 1 start descending again
 
-        return True
+        # altitude is below 3 m make virtual boarder 1 and 2 smaller
+
+        # move in xy plane
+
+        # descend againg
+
+        # uav landed
+        time.sleep(10)
+        print("send messages landed")
+        self.marker_socket.sendall("landed\n".encode())
+    """
