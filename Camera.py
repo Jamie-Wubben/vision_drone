@@ -46,6 +46,7 @@ class Camera:
     returns 0 if command was not recognized
     returns 1 if everything went write
     """
+
     def process_command(self, command):
         if command == 'start_camera':
             try:
@@ -96,7 +97,7 @@ class Camera:
             # record and show the camerafeeds
             if self.ret:
                 self.out.write(self.frame)
-                #cv2.imshow('frame', self.frame)
+                # cv2.imshow('frame', self.frame)
                 if cv2.waitKey(1) & (0xFF == ord('q') or not self.running):
                     break
             else:
@@ -137,7 +138,11 @@ class Camera:
                 cv2.putText(gray, str(rvecs[0][0]), (10, 50), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
                 cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
                 cv2.imshow("gray", gray)
-                self.positionLog.info(str(tvecs[0][0][0])+","+str(tvecs[0][0][1])+","+str(tvecs[0][0][2]))
+                # TODO find nicer way to todo this
+                self.positionLog.info(
+                    str(tvecs[0][0][0]).replace('.', ',') + ";"
+                    + str(tvecs[0][0][1]).replace('.', ',') + ";"
+                    + str(tvecs[0][0][2]).replace('.', ','))
             else:
                 cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
                 cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
