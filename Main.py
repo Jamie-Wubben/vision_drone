@@ -1,10 +1,8 @@
-import warnings
-
 from Camera import Camera
 import argparse
 import time
 from SocketCallback import SocketCallback
-import Logger as log
+from Logging import Logger as log
 
 main_running = True
 

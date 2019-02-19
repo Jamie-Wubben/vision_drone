@@ -9,7 +9,7 @@ def create_logger():
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-    fileHandler = logging.FileHandler("vision_log.txt")
+    fileHandler = logging.FileHandler("Logging/vision_log.txt")
     fileFormatter = logging.Formatter('%(asctime)s - [DRONE VISION] %(levelname)s - %(funcName)s - %(message)s')
     fileHandler.setFormatter(fileFormatter)
     fileHandler.setLevel(logging.DEBUG)
