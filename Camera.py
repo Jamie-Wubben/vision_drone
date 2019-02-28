@@ -1,12 +1,14 @@
 import _thread
 import os
 import time
-
+import socket
 import cv2
 import cv2.aruco as aruco
 import numpy as np
+from numpy.core.multiarray import ndarray
 
 from Logging import Logger as log, PositionLogger as pos
+from PositionProcessor import PositionProcessor
 
 
 class Camera:
@@ -37,14 +39,16 @@ class Camera:
         self.out = None
         self.cap = None
 
-        # self.marker_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.marker_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.positionProcessor = PositionProcessor()
+
 
     """
     process command, takes command and starts the right method
     some methods needs to be start in a thread
     returns -1 if exception accours
     returns 0 if command was not recognized
-    returns 1 if everything went write
+    returns 1 if everything went right
     """
 
     def process_command(self, command):
@@ -72,12 +76,14 @@ class Camera:
         return 1
 
     def close(self):
+        # stops the camera but also kills the python application
         self.logger.info("Closing...")
         self.stop_camera()
 
     def start_camera(self):
         self.logger.info("Starting camera ...")
-        # for recording
+        # looks how many files there exist with name video in ./FlightMovies/
+        # new video will have a higher number so that the old videos wont be overwritten
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         dir_name = "./FlightMovies"
         counter = 0
@@ -90,15 +96,15 @@ class Camera:
         self.logger.info("Start camera and record.")
 
         self.running = True
-        self.cap = cv2.VideoCapture("FlightMovies/realFlight.avi")
-        # if runned for second time program stays in wile loop because other messages are not received anymore
-        while True:
+        self.cap = cv2.VideoCapture("FlightMovies/video1.avi")
+        # self.cap = cv2.VideoCapture(0)
+        while self.running:
             self.ret, self.frame = self.cap.read()
             # record and show the camerafeeds
             if self.ret:
                 self.out.write(self.frame)
                 # cv2.imshow('frame', self.frame)
-                if cv2.waitKey(1) & (0xFF == ord('q') or not self.running):
+                if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
             else:
                 break
@@ -113,10 +119,13 @@ class Camera:
     def find_target(self):
         aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
         font = cv2.FONT_HERSHEY_PLAIN
-        camera_matrix = np.loadtxt('camera_matrix.txt')
-        distortion = np.loadtxt('distortion.txt')
 
-        # self.marker_socket.connect(("localhost", 5764))
+        camera_matrix = np.loadtxt('camera_matrix.txt')
+        distortion: ndarray = np.loadtxt('distortion.txt')
+
+        self.marker_socket.connect(("localhost", 5764))
+
+        noCameraCounter = 0
 
         while True:
             key = cv2.waitKey(1)
@@ -124,45 +133,42 @@ class Camera:
                 break
 
             if not self.ret:
-                break
-
-            # check to find target
-            gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-            # documentation for detectorparameters see
-            # https://docs.opencv.org/3.1.0/d5/dae/tutorial_aruco_detection.html
-            parameters = aruco.DetectorParameters_create()
-            corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-            if corners:
-                rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, camera_matrix, distortion)
-                cv2.putText(gray, str(tvecs[0][0]), (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.putText(gray, str(rvecs[0][0]), (10, 50), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.imshow("gray", gray)
-                # TODO find nicer way to todo this
-                self.positionLog.info(
-                    str(tvecs[0][0][0]).replace('.', ',') + ";"
-                    + str(tvecs[0][0][1]).replace('.', ',') + ";"
-                    + str(tvecs[0][0][2]).replace('.', ','))
+                # because start_camera and find_target are started in different threads there is a possibility
+                # that they are started at (almost) the same moment. When this happens there would self.ret would be
+                # False. In this way the camera has time to "warm up".
+                noCameraCounter += 1
+                self.logger.warn("no camera: counter = " + str(noCameraCounter))
+                if noCameraCounter >= 10:
+                    self.logger.error("no camera after 5 tries")
+                    self.marker_socket.sendall("error\n".encode())
+                    self.logger.error("error, uav land")
+                    break
+                time.sleep(0.5)
             else:
-                cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.imshow("gray", gray)
+                # check to find target
+                gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+                # documentation for detectorparameters see
+                # https://docs.opencv.org/3.1.0/d5/dae/tutorial_aruco_detection.html
+                parameters = aruco.DetectorParameters_create()
+                corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+                if corners:
+                    rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, camera_matrix,
+                                                                               distortion)
+                    responds = self.positionProcessor.process(tvecs[0][0][0], tvecs[0][0][1], tvecs[0][0][2])
+                    if responds is not "":
+                        self.marker_socket.sendall(responds.encode())
 
-        self.cap.release()
-        cv2.destroyAllWindows()
+                    cv2.putText(self.frame, str(tvecs[0][0]), (10, 30), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+                    cv2.putText(self.frame, "press q to quit", (10, 450), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+                    aruco.drawAxis(self.frame, camera_matrix, distortion, rvecs, tvecs, 0.1)
+                    cv2.imshow("frame", self.frame)
+                    # TODO find nicer way to todo this
+                    self.positionLog.info(
+                        str(tvecs[0][0][0]).replace('.', ',') + ";"
+                        + str(tvecs[0][0][1]).replace('.', ',') + ";"
+                        + str(tvecs[0][0][2]).replace('.', ','))
+                else:
+                    cv2.putText(self.frame, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    cv2.putText(self.frame, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    cv2.imshow("frame", self.frame)
 
-        # target found start descending
-
-        # outside virtual boarder 2 move in xy plane
-        # self.marker_socket.sendall("1100,1500,1500,1500\n".encode())
-        # print("send messages move")
-        # inside virtual boarder 1 start descending again
-
-        # altitude is below 3 m make virtual boarder 1 and 2 smaller
-
-        # move in xy plane
-
-        # descend againg
-
-        # uav landed
-        # self.marker_socket.sendall("landed\n".encode())
