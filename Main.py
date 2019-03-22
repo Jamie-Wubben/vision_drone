@@ -1,6 +1,7 @@
 from Camera import Camera
 import argparse
 import time
+
 from SocketCallback import SocketCallback
 from Logging import Logger as log
 
@@ -24,7 +25,6 @@ class listener:
         self.command_socket.start()
 
         self.cam = Camera(working_mode)
-        self.alreadyBooted = False
 
     def close(self):
         self.logger.info("closing listener")
@@ -39,6 +39,7 @@ class listener:
         command = data.decode().rstrip()
         self.logger.info("getting command: " + command)
         success = self.cam.process_command(command)
+
         if success == 1:
             sock.send("ACK\n".encode())
             if command == 'exit':

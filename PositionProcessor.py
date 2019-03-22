@@ -21,7 +21,6 @@ class PositionProcessor:
             x_angle = np.rad2deg(np.arctan(x / z))
             y_angle = np.rad2deg(np.arctan(y / z))
 
-            print(self.lastMessage)
             if z < 0.5:
                 if self.lastMessage is not "land":
                     self.lastMessage = "land"

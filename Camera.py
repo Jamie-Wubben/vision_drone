@@ -1,4 +1,5 @@
 import _thread
+import math
 import os
 import time
 import socket
@@ -41,7 +42,6 @@ class Camera:
 
         self.marker_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.positionProcessor = PositionProcessor()
-
 
     """
     process command, takes command and starts the right method
@@ -96,8 +96,8 @@ class Camera:
         self.logger.info("Start camera and record.")
 
         self.running = True
-        self.cap = cv2.VideoCapture("FlightMovies/video1.avi")
-        # self.cap = cv2.VideoCapture(0)
+        # self.cap = cv2.VideoCapture("FlightMovies/video5.avi")
+        self.cap = cv2.VideoCapture(0)
         while self.running:
             self.ret, self.frame = self.cap.read()
             # record and show the camerafeeds
@@ -123,7 +123,7 @@ class Camera:
         camera_matrix = np.loadtxt('camera_matrix.txt')
         distortion: ndarray = np.loadtxt('distortion.txt')
 
-        self.marker_socket.connect(("localhost", 5764))
+        # self.marker_socket.connect(("localhost", 5764))
 
         noCameraCounter = 0
 
@@ -139,7 +139,7 @@ class Camera:
                 noCameraCounter += 1
                 self.logger.warn("no camera: counter = " + str(noCameraCounter))
                 if noCameraCounter >= 10:
-                    self.logger.error("no camera after 5 tries")
+                    self.logger.error("no camera after 10 tries")
                     self.marker_socket.sendall("error\n".encode())
                     self.logger.error("error, uav land")
                     break
@@ -154,21 +154,36 @@ class Camera:
                 if corners:
                     rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, camera_matrix,
                                                                                distortion)
+                    """
                     responds = self.positionProcessor.process(tvecs[0][0][0], tvecs[0][0][1], tvecs[0][0][2])
                     if responds is not "":
                         self.marker_socket.sendall(responds.encode())
+                    """
 
-                    cv2.putText(self.frame, str(tvecs[0][0]), (10, 30), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
-                    cv2.putText(self.frame, "press q to quit", (10, 450), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
-                    aruco.drawAxis(self.frame, camera_matrix, distortion, rvecs, tvecs, 0.1)
-                    cv2.imshow("frame", self.frame)
+                    # Rodrigues: calculated rotation matrix from rotation vector
+                    rmat = cv2.Rodrigues(rvecs[0][0])[0]
+                    # concat rmat and tvecs to make a projection matrix
+                    P = np.c_[rmat, tvecs[0][0]]
+                    # decompose projectionMatrix and retrive the angles
+                    #https://shimat.github.io/opencvsharp_2410/html/b268a47c-b24b-aa64-a273-c1b1927b7ec0.htm
+                    angles = -cv2.decomposeProjectionMatrix(P)[6]
+
+                    cv2.putText(gray, str(tvecs[0][0]), (10, 30), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+                    cv2.putText(gray, str(angles), (10, 60), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+                    cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+                    aruco.drawAxis(gray, camera_matrix, distortion, rvecs, tvecs, 0.1)
+                    cv2.imshow("frame", gray)
                     # TODO find nicer way to todo this
                     self.positionLog.info(
                         str(tvecs[0][0][0]).replace('.', ',') + ";"
                         + str(tvecs[0][0][1]).replace('.', ',') + ";"
-                        + str(tvecs[0][0][2]).replace('.', ','))
+                        + str(tvecs[0][0][2]).replace('.', ',') + ";"
+                        + str(angles[0]).replace('.', ',') + ";"
+                        + str(angles[1]).replace('.', ',') + ";"
+                        + str(angles[2]).replace('.', ',')
+                    )
                 else:
-                    cv2.putText(self.frame, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                    cv2.putText(self.frame, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                    cv2.imshow("frame", self.frame)
+                    cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    cv2.imshow("frame", gray)
 
