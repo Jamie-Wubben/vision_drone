@@ -13,7 +13,9 @@ class PositionProcessor:
     checks if the messages was send within 65 mseconds of the last messages
     returns a string with either: land, descend, (x,y) or empty
     """
-    def process(self, x, y, z,alfa):
+    def process(self, x, y, z, alfa):
+        alfa = str(alfa).replace("[", "")
+        alfa = alfa.replace("]", "")
         # TODO change constant to something more intelligent
         # only do something is the marker is detected continuously
         if self.lastTime + 65 > timeMillis():

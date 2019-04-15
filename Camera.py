@@ -97,8 +97,8 @@ class Camera:
         self.logger.info("Start camera and record.")
 
         self.running = True
-        # self.cap = cv2.VideoCapture("FlightMovies/realFlight1.avi")
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture("FlightMovies/realFlight1.avi")
+        #self.cap = cv2.VideoCapture(0)
         while self.running:
             self.ret, self.frame = self.cap.read()
             # record and show the camerafeeds
@@ -151,6 +151,7 @@ class Camera:
             else:
                 # check to find target
                 gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+
                 # documentation for detectorparameters see
                 # https://docs.opencv.org/3.1.0/d5/dae/tutorial_aruco_detection.html
                 parameters = aruco.DetectorParameters_create()
@@ -159,17 +160,16 @@ class Camera:
                     noMarkerCounter = 0
                     rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, camera_matrix,
                                                                                distortion)
-
                     # Rodrigues: calculated rotation matrix from rotation vector
                     rmat = cv2.Rodrigues(rvecs[0][0])[0]
                     # concat rmat and tvecs to make a projection matrix
                     P = np.c_[rmat, tvecs[0][0]]
                     # decompose projectionMatrix and retrive the angles
                     #https://shimat.github.io/opencvsharp_2410/html/b268a47c-b24b-aa64-a273-c1b1927b7ec0.htm
-                    angles = -cv2.decomposeProjectionMatrix(P)[6]
+                    angles = -cv2.decomposeProjectionMatrix(P)[6]+180
 
-                    cv2.putText(gray, str(tvecs[0][0]), (10, 30), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
-                    cv2.putText(gray, str(angles), (10, 60), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+                    cv2.putText(gray, str(tvecs[0][0]), (10, 60), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+                    cv2.putText(gray, str(angles).replace('[', '').replace(']', ''), (10, 90), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
                     cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
                     aruco.drawAxis(gray, camera_matrix, distortion, rvecs, tvecs, 0.1)
                     cv2.imshow("frame", gray)
@@ -180,9 +180,9 @@ class Camera:
                         str(tvecs[0][0][0]).replace('.', ',') + ";"
                         + str(tvecs[0][0][1]).replace('.', ',') + ";"
                         + str(tvecs[0][0][2]).replace('.', ',') + ";"
-                        + str(angles[0]).replace('.', ',') + ";"
-                        + str(angles[1]).replace('.', ',') + ";"
-                        + str(angles[2]).replace('.', ',')
+                        + str(angles[0]).replace('.', ',').replace('[', '').replace(']', '') + ";"
+                        + str(angles[1]).replace('.', ',').replace('[', '').replace(']', '') + ";"
+                        + str(angles[2]).replace('.', ',').replace('[', '').replace(']', '')
                     )
                 else:
                     cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
