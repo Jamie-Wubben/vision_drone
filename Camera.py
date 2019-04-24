@@ -98,6 +98,7 @@ class Camera:
 
         self.running = True
         #self.cap = cv2.VideoCapture("FlightMovies/realFlight1.avi")
+
         self.cap = cv2.VideoCapture(0)
         while self.running:
             self.ret, self.frame = self.cap.read()
