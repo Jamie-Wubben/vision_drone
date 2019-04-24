@@ -1,12 +1,10 @@
 import _thread
-import math
 import os
 import time
 import socket
 import cv2
 import cv2.aruco as aruco
 import numpy as np
-from numpy.core.multiarray import ndarray
 
 from Logging import Logger as log, PositionLogger as pos
 from PositionProcessor import PositionProcessor
@@ -18,7 +16,7 @@ class Camera:
 
     def __init__(self, working_mode):
         self.logger.info("Init camera")
-
+        self.working_mode = working_mode
         # if pi run modprobe to be able to acces the picam
         if working_mode == "pi":
             os.system('sudo modprobe bcm2835-v4l2')
@@ -34,16 +32,20 @@ class Camera:
 
         self.markerLength = 0.185  # length of real marker in meters
         self.running = True
-        self.ret = None
-        self.frame = None
-        self.out = None
-        self.cap = None
+        self.ret = None  # Boolean: true if information from camera
+        self.frame = None  # Information from camera
+        self.out = None  # Output stream, which saves the video
+        self.cap = None  # Camera
+
         self.find_target_running = False
 
+        # socket to give Ardusim information about the marker
         self.marker_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.positionProcessor = PositionProcessor()
         self.message = "loiter\n"
         self.lastMessage = self.message
+
+        self.positionProcessor = PositionProcessor()
+
     """
     process command, takes command and starts the right method
     some methods needs to be start in a thread
@@ -97,7 +99,7 @@ class Camera:
         self.logger.info("Start camera and record.")
 
         self.running = True
-        #self.cap = cv2.VideoCapture("FlightMovies/realFlight1.avi")
+        # self.cap = cv2.VideoCapture("FlightMovies/realFlight1.avi")
 
         self.cap = cv2.VideoCapture(0)
         while self.running:
@@ -123,9 +125,6 @@ class Camera:
         aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
         font = cv2.FONT_HERSHEY_PLAIN
 
-        camera_matrix = np.loadtxt('camera_matrix.txt')
-        distortion: ndarray = np.loadtxt('distortion.txt')
-
         self.marker_socket.connect(("localhost", 5764))
         # start by sending loiter, later the message will change so that the drone will move
         self.marker_socket.sendall(self.message.encode())
@@ -148,7 +147,7 @@ class Camera:
                     self.logger.error("error, uav land")
                     self.find_target_running = False
                     break
-                time.sleep(0.5)
+                time.sleep(1)
             else:
                 # check to find target
                 gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
@@ -159,23 +158,27 @@ class Camera:
                 corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
                 if corners:
                     noMarkerCounter = 0
-                    rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, camera_matrix,
-                                                                               distortion)
+                    rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, self.cameraMatrix,
+                                                                               self.cameraDistortion)
                     # Rodrigues: calculated rotation matrix from rotation vector
                     rmat = cv2.Rodrigues(rvecs[0][0])[0]
                     # concat rmat and tvecs to make a projection matrix
                     P = np.c_[rmat, tvecs[0][0]]
                     # decompose projectionMatrix and retrive the angles
-                    #https://shimat.github.io/opencvsharp_2410/html/b268a47c-b24b-aa64-a273-c1b1927b7ec0.htm
-                    angles = -cv2.decomposeProjectionMatrix(P)[6]+180
+                    # https://shimat.github.io/opencvsharp_2410/html/b268a47c-b24b-aa64-a273-c1b1927b7ec0.htm
+                    angles = -cv2.decomposeProjectionMatrix(P)[6] + 180
 
-                    cv2.putText(gray, str(tvecs[0][0]), (10, 60), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
-                    cv2.putText(gray, str(angles).replace('[', '').replace(']', ''), (10, 90), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
-                    cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
-                    aruco.drawAxis(gray, camera_matrix, distortion, rvecs, tvecs, 0.1)
-                    cv2.imshow("frame", gray)
+                    # Don't show the camera processing on the drone/pi
+                    if self.working_mode != "pi":
+                        cv2.putText(gray, str(tvecs[0][0]), (10, 60), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+                        cv2.putText(gray, str(angles).replace('[', '').replace(']', ''), (10, 90), font, 1, (0, 0, 0), 2
+                                    , cv2.LINE_AA)
+                        cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+                        aruco.drawAxis(gray, self.cameraMatrix, self.cameraDistortion, rvecs, tvecs, 0.1)
+                        cv2.imshow("frame", gray)
 
-                    self.message = self.positionProcessor.process(tvecs[0][0][0], tvecs[0][0][1], tvecs[0][0][2], angles[0])
+                    self.message = self.positionProcessor.process(tvecs[0][0][0], tvecs[0][0][1], tvecs[0][0][2],
+                                                                  angles[0])
                     # TODO find nicer way to todo this
                     self.positionLog.info(
                         str(tvecs[0][0][0]).replace('.', ',') + ";"
@@ -197,5 +200,3 @@ class Camera:
                     self.lastMessage = self.message
                     self.marker_socket.sendall(self.message.encode())
                     # TODO stop this method when command land is send
-
-

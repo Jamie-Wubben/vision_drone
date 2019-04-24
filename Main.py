@@ -13,6 +13,7 @@ class listener:
     logger = log.logger
 
     def __init__(self, working_mode, ip, port):
+        self.logger.info("\n\nNEW START")
         self.logger.info("init listener")
         self.working_mode = working_mode
 
