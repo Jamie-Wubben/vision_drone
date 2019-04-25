@@ -111,6 +111,7 @@ class Camera:
             self.ret, self.frame = self.cap.read()
             # record and show the camerafeeds
             if self.ret:
+                self.logger.info("camera running....")
                 self.out.write(self.frame)
                 # cv2.imshow('frame', self.frame)
                 if cv2.waitKey(25) & 0xFF == ord('q'):
