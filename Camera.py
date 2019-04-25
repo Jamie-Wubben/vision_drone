@@ -22,6 +22,7 @@ class Camera:
             os.system('sudo modprobe bcm2835-v4l2')
             time.sleep(0.1)
 
+        self.logger.info("Camera inited correctly")
         # use calibration matrix to be able to estimate pose
         try:
             self.cameraDistortion = np.loadtxt('distortion.txt')
@@ -57,15 +58,18 @@ class Camera:
     def process_command(self, command):
         if command == 'start_camera':
             try:
+                self.logger.info("start new thread to start camera")
                 _thread.start_new_thread(self.start_camera, ())
             except Exception as e:
                 self.logger.warn("unable to start thread start_camera")
                 self.logger.exception(e)
                 return -1
         elif command == 'stop_camera':
+            self.logger.info("stopping the camera")
             self.stop_camera()
         elif command == 'find_target':
             try:
+                self.logger.info("start new thread to find target")
                 _thread.start_new_thread(self.find_target, ())
             except Exception as e:
                 self.logger.warn("unable to start thread find_target")
@@ -102,6 +106,7 @@ class Camera:
         # self.cap = cv2.VideoCapture("FlightMovies/realFlight1.avi")
 
         self.cap = cv2.VideoCapture(0)
+        self.logger.info("recording the video feed")
         while self.running:
             self.ret, self.frame = self.cap.read()
             # record and show the camerafeeds
@@ -109,8 +114,10 @@ class Camera:
                 self.out.write(self.frame)
                 # cv2.imshow('frame', self.frame)
                 if cv2.waitKey(25) & 0xFF == ord('q'):
+                    self.logger.info("stop the video feed")
                     break
             else:
+                self.logger.warn("stop the video feed: self.ret == False")
                 break
 
     def stop_camera(self):
@@ -121,11 +128,13 @@ class Camera:
         self.out.release()
 
     def find_target(self):
+        self.logger.info("starting find_target")
         self.find_target_running = True
         aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
         font = cv2.FONT_HERSHEY_PLAIN
 
         self.marker_socket.connect(("localhost", 5764))
+        self.logger.info("maded connection with ardusim")
         # start by sending loiter, later the message will change so that the drone will move
         self.marker_socket.sendall(self.message.encode())
         noCameraCounter = 0
@@ -134,6 +143,7 @@ class Camera:
         while self.find_target_running:
             key = cv2.waitKey(1)
             if key == 113:
+                self.logger.info("stop the camera feed")
                 break
             if not self.ret:
                 # because start_camera and find_target are started in different threads there is a possibility
@@ -179,6 +189,7 @@ class Camera:
 
                     self.message = self.positionProcessor.process(tvecs[0][0][0], tvecs[0][0][1], tvecs[0][0][2],
                                                                   angles[0])
+
                     # TODO find nicer way to todo this
                     self.positionLog.info(
                         str(tvecs[0][0][0]).replace('.', ',') + ";"
@@ -197,6 +208,7 @@ class Camera:
                         self.message = "loiter\n"
 
                 if self.message is not self.lastMessage:
+                    self.logger.info("send message to ardusim " + self.message)
                     self.lastMessage = self.message
                     self.marker_socket.sendall(self.message.encode())
                     # TODO stop this method when command land is send

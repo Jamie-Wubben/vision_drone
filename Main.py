@@ -42,12 +42,15 @@ class listener:
         success = self.cam.process_command(command)
 
         if success == 1:
+            self.logger.info(command + " executed correctly")
             sock.send("ACK\n".encode())
             if command == 'exit':
                 self.close()
         elif success == 0:
+            self.logger.warn(command + " executed incorrectly")
             sock.send("NACK\n".encode())
         elif success == -1:
+            self.logger.warn(command + "executed incorrectly")
             sock.send("NACK\n".encode())
             # TODO do something when exception accours
 
