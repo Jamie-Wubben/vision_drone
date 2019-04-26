@@ -177,6 +177,7 @@ class Camera:
                 # https://docs.opencv.org/3.1.0/d5/dae/tutorial_aruco_detection.html
                 parameters = aruco.DetectorParameters_create()
                 corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+                self.logger.info("corners: " + corners)
                 if corners:
                     noMarkerCounter = 0
                     rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, self.cameraMatrix,
@@ -188,7 +189,7 @@ class Camera:
                     # decompose projectionMatrix and retrive the angles
                     # https://shimat.github.io/opencvsharp_2410/html/b268a47c-b24b-aa64-a273-c1b1927b7ec0.htm
                     angles = -cv2.decomposeProjectionMatrix(P)[6] + 180
-
+                    self.logger.info("angles calulated")
                     # Don't show the camera processing on the drone/pi
                     if self.working_mode != "pi":
                         cv2.putText(gray, str(tvecs[0][0]), (10, 60), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
@@ -200,7 +201,7 @@ class Camera:
 
                     self.message = self.positionProcessor.process(tvecs[0][0][0], tvecs[0][0][1], tvecs[0][0][2],
                                                                   angles[0])
-
+                    self.logger.info("positionProcessor proccesed")
                     # TODO find nicer way to todo this
                     self.positionLog.info(
                         str(tvecs[0][0][0]).replace('.', ',') + ";"
@@ -211,9 +212,11 @@ class Camera:
                         + str(angles[2]).replace('.', ',').replace('[', '').replace(']', '')
                     )
                 else:
-                    cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                    cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                    cv2.imshow("frame", gray)
+                    self.logger.info("no markers detected")
+                    if self.working_mode != "pi":
+                        cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                        cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                        cv2.imshow("frame", gray)
                     noMarkerCounter += 1
                     if noMarkerCounter > 50:
                         self.message = "loiter\n"
