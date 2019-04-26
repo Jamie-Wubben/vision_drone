@@ -138,6 +138,12 @@ class Camera:
         self.marker_socket.connect(("localhost", 5764))
         self.logger.info("made connection with ardusim")
 
+        """
+        for x in range(0, 10):
+            self.logger.info("send message: " + str(x))
+            self.marker_socket.sendall("ping\n".encode())
+            time.sleep(0.1)
+        """
         # start by sending loiter, later the message will change so that the drone will move
 
         self.marker_socket.sendall(self.message.encode())
@@ -167,12 +173,6 @@ class Camera:
                 # check to find target
                 gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
 
-        for x in range(0, 10):
-            self.logger.info("send message: " + str(x))
-            self.marker_socket.sendall("ping\n".encode())
-            time.sleep(0.1)
-
-        """
                 # documentation for detectorparameters see
                 # https://docs.opencv.org/3.1.0/d5/dae/tutorial_aruco_detection.html
                 parameters = aruco.DetectorParameters_create()
@@ -218,6 +218,12 @@ class Camera:
                     if noMarkerCounter > 50:
                         self.message = "loiter\n"
 
+        for x in range(0, 10):
+            self.logger.info("send message: " + str(x))
+            self.marker_socket.sendall("ping\n".encode())
+            time.sleep(0.1)
+
+        """
                 if self.message is not self.lastMessage:
                     self.logger.info("send message to ardusim " + self.message)
                     self.lastMessage = self.message
