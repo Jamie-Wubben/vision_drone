@@ -5,7 +5,6 @@ import socket
 import cv2
 import cv2.aruco as aruco
 import numpy as np
-import datetime
 
 from Logging import Logger as log, PositionLogger as pos
 from PositionProcessor import PositionProcessor
@@ -112,7 +111,6 @@ class Camera:
             self.ret, self.frame = self.cap.read()
             # record and show the camerafeeds
             if self.ret:
-                #self.logger.info("camera running....")
                 self.out.write(self.frame)
                 # cv2.imshow('frame', self.frame)
                 if cv2.waitKey(25) & 0xFF == ord('q'):
@@ -134,24 +132,17 @@ class Camera:
         self.find_target_running = True
         aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
         font = cv2.FONT_HERSHEY_PLAIN
+        parameters = aruco.DetectorParameters_create()
 
         self.marker_socket.connect(("localhost", 5764))
         self.logger.info("made connection with ardusim")
 
-        """
-        for x in range(0, 10):
-            self.logger.info("send message: " + str(x))
-            self.marker_socket.sendall("ping\n".encode())
-            time.sleep(0.1)
-        """
         # start by sending loiter, later the message will change so that the drone will move
-
         self.marker_socket.sendall(self.message.encode())
         noCameraCounter = 0
         noMarkerCounter = 0
-        now = datetime.datetime.now()
 
-        while self.find_target_running and ((datetime.datetime.now() - now).seconds < 15):
+        while self.find_target_running:
             key = cv2.waitKey(1)
             if key == 113:
                 self.logger.info("stop the camera feed")
@@ -172,12 +163,9 @@ class Camera:
             else:
                 # check to find target
                 gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-
                 # documentation for detectorparameters see
                 # https://docs.opencv.org/3.1.0/d5/dae/tutorial_aruco_detection.html
-                parameters = aruco.DetectorParameters_create()
                 corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-                self.logger.info("corners: " + corners)
                 if corners:
                     noMarkerCounter = 0
                     rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, self.cameraMatrix,
@@ -189,7 +177,6 @@ class Camera:
                     # decompose projectionMatrix and retrive the angles
                     # https://shimat.github.io/opencvsharp_2410/html/b268a47c-b24b-aa64-a273-c1b1927b7ec0.htm
                     angles = -cv2.decomposeProjectionMatrix(P)[6] + 180
-                    self.logger.info("angles calulated")
                     # Don't show the camera processing on the drone/pi
                     if self.working_mode != "pi":
                         cv2.putText(gray, str(tvecs[0][0]), (10, 60), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
@@ -201,7 +188,6 @@ class Camera:
 
                     self.message = self.positionProcessor.process(tvecs[0][0][0], tvecs[0][0][1], tvecs[0][0][2],
                                                                   angles[0])
-                    self.logger.info("positionProcessor proccesed")
                     # TODO find nicer way to todo this
                     self.positionLog.info(
                         str(tvecs[0][0][0]).replace('.', ',') + ";"
@@ -212,7 +198,6 @@ class Camera:
                         + str(angles[2]).replace('.', ',').replace('[', '').replace(']', '')
                     )
                 else:
-                    self.logger.info("no markers detected")
                     if self.working_mode != "pi":
                         cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
                         cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
@@ -221,15 +206,8 @@ class Camera:
                     if noMarkerCounter > 50:
                         self.message = "loiter\n"
 
-        for x in range(0, 10):
-            self.logger.info("send message: " + str(x))
-            self.marker_socket.sendall("ping\n".encode())
-            time.sleep(0.1)
-
-        """
                 if self.message is not self.lastMessage:
                     self.logger.info("send message to ardusim " + self.message)
                     self.lastMessage = self.message
                     self.marker_socket.sendall(self.message.encode())
                     # TODO stop this method when command land is send
-                """
