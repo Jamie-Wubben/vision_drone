@@ -5,6 +5,7 @@ import socket
 import cv2
 import cv2.aruco as aruco
 import numpy as np
+import datetime
 
 from Logging import Logger as log, PositionLogger as pos
 from PositionProcessor import PositionProcessor
@@ -136,19 +137,15 @@ class Camera:
 
         self.marker_socket.connect(("localhost", 5764))
         self.logger.info("made connection with ardusim")
-        for x in range(0, 10):
-            self.logger.info("send message: " + str(x))
-            self.marker_socket.sendall("ping\n".encode())
-            time.sleep(1)
-
 
         # start by sending loiter, later the message will change so that the drone will move
-        """
+
         self.marker_socket.sendall(self.message.encode())
         noCameraCounter = 0
         noMarkerCounter = 0
+        now = datetime.datetime.now()
 
-        while self.find_target_running:
+        while self.find_target_running and ((datetime.datetime.now() - now).seconds < 15):
             key = cv2.waitKey(1)
             if key == 113:
                 self.logger.info("stop the camera feed")
@@ -170,6 +167,12 @@ class Camera:
                 # check to find target
                 gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
 
+        for x in range(0, 10):
+            self.logger.info("send message: " + str(x))
+            self.marker_socket.sendall("ping\n".encode())
+            time.sleep(0.1)
+
+        """
                 # documentation for detectorparameters see
                 # https://docs.opencv.org/3.1.0/d5/dae/tutorial_aruco_detection.html
                 parameters = aruco.DetectorParameters_create()
