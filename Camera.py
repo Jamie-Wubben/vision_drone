@@ -135,8 +135,15 @@ class Camera:
         font = cv2.FONT_HERSHEY_PLAIN
 
         self.marker_socket.connect(("localhost", 5764))
-        self.logger.info("maded connection with ardusim")
+        self.logger.info("made connection with ardusim")
+        for x in range(0, 9):
+            self.logger.info("send message: " + x)
+            self.marker_socket.sendall("ping".encode())
+            time.sleep(1)
+
+
         # start by sending loiter, later the message will change so that the drone will move
+        """
         self.marker_socket.sendall(self.message.encode())
         noCameraCounter = 0
         noMarkerCounter = 0
@@ -213,3 +220,4 @@ class Camera:
                     self.lastMessage = self.message
                     self.marker_socket.sendall(self.message.encode())
                     # TODO stop this method when command land is send
+                """
