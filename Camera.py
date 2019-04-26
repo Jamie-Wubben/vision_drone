@@ -111,7 +111,7 @@ class Camera:
             self.ret, self.frame = self.cap.read()
             # record and show the camerafeeds
             if self.ret:
-                self.logger.info("camera running....")
+                #self.logger.info("camera running....")
                 self.out.write(self.frame)
                 # cv2.imshow('frame', self.frame)
                 if cv2.waitKey(25) & 0xFF == ord('q'):
@@ -136,9 +136,9 @@ class Camera:
 
         self.marker_socket.connect(("localhost", 5764))
         self.logger.info("made connection with ardusim")
-        for x in range(0, 9):
-            self.logger.info("send message: " + x)
-            self.marker_socket.sendall("ping".encode())
+        for x in range(0, 10):
+            self.logger.info("send message: " + str(x))
+            self.marker_socket.sendall("ping\n".encode())
             time.sleep(1)
 
 
