@@ -103,7 +103,7 @@ class Camera:
         self.logger.info("Start camera and record.")
 
         self.running = True
-        # self.cap = cv2.VideoCapture("FlightMovies/realFlight1.avi")
+        #self.cap = cv2.VideoCapture("FlightMovies/realflight2.avi")
 
         self.cap = cv2.VideoCapture(0)
         self.logger.info("recording the video feed")
@@ -168,8 +168,8 @@ class Camera:
                 corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
                 if corners:
                     noMarkerCounter = 0
-                    rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, self.cameraMatrix,
-                                                                               self.cameraDistortion)
+                    rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, self.markerLength,
+                                                                               self.cameraMatrix, self.cameraDistortion)
                     # Rodrigues: calculated rotation matrix from rotation vector
                     rmat = cv2.Rodrigues(rvecs[0][0])[0]
                     # concat rmat and tvecs to make a projection matrix
@@ -198,6 +198,7 @@ class Camera:
                         + str(angles[2]).replace('.', ',').replace('[', '').replace(']', '')
                     )
                 else:
+
                     if self.working_mode != "pi":
                         cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
                         cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
