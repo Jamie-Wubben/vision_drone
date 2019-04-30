@@ -103,7 +103,7 @@ class Camera:
         self.logger.info("Start camera and record.")
 
         self.running = True
-        #self.cap = cv2.VideoCapture("FlightMovies/realflight2.avi")
+        # self.cap = cv2.VideoCapture("FlightMovies/realflight2.avi")
 
         self.cap = cv2.VideoCapture(0)
         self.logger.info("recording the video feed")
@@ -129,6 +129,8 @@ class Camera:
 
     def find_target(self):
         self.logger.info("starting find_target")
+        # init some parameters
+        # TODO set all parameters in an init function
         self.find_target_running = True
         aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
         font = cv2.FONT_HERSHEY_PLAIN
@@ -139,8 +141,8 @@ class Camera:
 
         # start by sending loiter, later the message will change so that the drone will move
         self.marker_socket.sendall(self.message.encode())
-        noCameraCounter = 0
-        noMarkerCounter = 0
+        noCameraTime = timeMillis()
+        lastMarkerTime = timeMillis()
 
         while self.find_target_running:
             key = cv2.waitKey(1)
@@ -151,15 +153,14 @@ class Camera:
                 # because start_camera and find_target are started in different threads there is a possibility
                 # that they are started at (almost) the same moment. When this happens there would self.ret would be
                 # False. In this way the camera has time to "warm up".
-                noCameraCounter += 1
-                self.logger.warn("no camera: counter = " + str(noCameraCounter))
-                if noCameraCounter >= 10:
-                    self.logger.error("no camera after 10 tries")
+                self.logger.warn("no camera ")
+                if timeMillis() > noCameraTime + 10*1000:
+                    self.logger.error("no camera after 10 seconds")
                     self.marker_socket.sendall("error\n".encode())
                     self.logger.error("error, uav land")
                     self.find_target_running = False
                     break
-                time.sleep(1)
+                time.sleep(0.5)
             else:
                 # check to find target
                 gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
@@ -167,7 +168,7 @@ class Camera:
                 # https://docs.opencv.org/3.1.0/d5/dae/tutorial_aruco_detection.html
                 corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
                 if corners:
-                    noMarkerCounter = 0
+                    lastMarkerTime = timeMillis()
                     rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, self.markerLength,
                                                                                self.cameraMatrix, self.cameraDistortion)
                     # Rodrigues: calculated rotation matrix from rotation vector
@@ -198,17 +199,21 @@ class Camera:
                         + str(angles[2]).replace('.', ',').replace('[', '').replace(']', '')
                     )
                 else:
-
                     if self.working_mode != "pi":
                         cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
                         cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
                         cv2.imshow("frame", gray)
-                    noMarkerCounter += 1
-                    if noMarkerCounter > 50:
+                    # if the marker is not seen in the last second send loiter
+                    if timeMillis() > lastMarkerTime + 1000:
                         self.message = "loiter\n"
 
+                # Only send new messages to avoid sending a lot of messages on the network
                 if self.message is not self.lastMessage:
                     self.logger.info("send message to ardusim " + self.message)
                     self.lastMessage = self.message
                     self.marker_socket.sendall(self.message.encode())
                     # TODO stop this method when command land is send
+
+
+def timeMillis():
+    return int(round(time.time() * 1000))
