@@ -19,7 +19,7 @@ class PositionProcessor:
         x_angle = np.rad2deg(np.arctan(x / z))
         y_angle = np.rad2deg(np.arctan(y / z))
 
-        if z < 0.5:
+        if z < 0.3:
             return "land\n"
         elif (abs(x_angle) > self.angle) or (abs(y_angle) > self.angle):
             # if the drone is outside virtual border move it towards the center
