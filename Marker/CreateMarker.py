@@ -9,10 +9,11 @@ args = parser.parse_args()
 id = 1 if not args.id else args.id
 
 aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
-img = aruco.drawMarker(aruco_dict, id, 800)
+img = aruco.drawMarker(aruco_dict, int(id), 800)
 
-# good for A4 paper
-plt.figure(figsize=(9.5, 9.5), dpi=100)
+# good for A4 paper 9.5,9.5
+# for A1 paper 28 28
+plt.figure(figsize=(28, 28), dpi=100)
 plt.imshow(img, cmap='gray', aspect="equal")
 plt.axis("off")
 plt.savefig("marker" + str(id) + ".pdf", bbox_inches="tight")

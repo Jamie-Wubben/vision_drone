@@ -1,7 +1,6 @@
 from Camera import Camera
 import argparse
 import time
-
 from SocketCallback import SocketCallback
 from Logging import Logger as log
 

@@ -14,10 +14,13 @@ class PositionProcessor:
     def process(self, x, y, z, alfa):
         alfa = str(alfa).replace("[", "")
         alfa = alfa.replace("]", "")
-        # TODO change constant to something more intelligent
         # only do something is the marker is detected continuously
         x_angle = np.rad2deg(np.arctan(x / z))
         y_angle = np.rad2deg(np.arctan(y / z))
+
+        if False:
+            if z > 7 and 315 > float(alfa) > 45:
+                return "rotate," + str(x) + "," + str(y) + "," + str(alfa) + "\n"
 
         if z < 0.3:
             return "land\n"

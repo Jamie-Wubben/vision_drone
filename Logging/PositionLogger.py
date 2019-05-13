@@ -1,5 +1,6 @@
 import logging
 
+# this logger is used only to save the position of the uav
 
 def create_logger():
     logger = logging.getLogger("POSITION ESTIMATION")

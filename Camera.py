@@ -31,7 +31,13 @@ class Camera:
             self.logger.error("Calibration file not found error.")
             # TODO close program if file not found
 
-        self.markerLength = 0.185  # length of real marker in meters
+        # length of real marker in meters
+        self.markerLength = {
+            0: 0.545,
+            1: 0.185,
+            2: 0.185,
+            3: 0.185
+        }
         self.running = True
         self.ret = None  # Boolean: true if information from camera
         self.frame = None  # Information from camera
@@ -143,6 +149,11 @@ class Camera:
         self.marker_socket.sendall(self.message.encode())
         noCameraTime = timeMillis()
         lastMarkerTime = timeMillis()
+        highest_id = -1
+        lastSeenHighestIdTime = time.time()
+        processCounter = 200
+        markerSeenCounter = 0
+        counting = False
 
         while self.find_target_running:
             key = cv2.waitKey(1)
@@ -154,7 +165,7 @@ class Camera:
                 # that they are started at (almost) the same moment. When this happens there would self.ret would be
                 # False. In this way the camera has time to "warm up".
                 self.logger.warn("no camera ")
-                if timeMillis() > noCameraTime + 10*1000:
+                if timeMillis() > noCameraTime + 10 * 1000:
                     self.logger.error("no camera after 10 seconds")
                     self.marker_socket.sendall("error\n".encode())
                     self.logger.error("error, uav land")
@@ -167,37 +178,79 @@ class Camera:
                 # documentation for detectorparameters see
                 # https://docs.opencv.org/3.1.0/d5/dae/tutorial_aruco_detection.html
                 corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+
+                index = -1
                 if corners:
+                    # calculate which marker should be used to get the pose of the UAV
+                    # always take the marker with the highest ID.
+                    # sometimes the marker with the highest ID will not be visible (for a few milliseconds) this will
+                    # cause the algorithm to use the second highest ID. This is not the wanted behaviour therefor take
+                    # the highest ID ever recorded. If this one does not exist send loiter. It is important that the
+                    # marker with the highest ID is the smallest marker
+                    if counting:
+                        processCounter = processCounter + 1
+                    else:
+                        processCounter = 200
+                        markerSeenCounter = 0
+
+                    for i in range(0, len(ids)):
+                        # do some weird conversion because ids[i] is a np.array
+                        if str(ids[i][0]) > str(highest_id):
+                            counting = True
+
+                        if str(ids[i][0]) >= str(highest_id):
+                            lastSeenHighestIdTime = time.time()
+                            markerSeenCounter = markerSeenCounter + 2
+                            index = i
+                            if (markerSeenCounter > processCounter) and counting:
+                                self.logger.info("changed to new marker")
+                                highest_id = ids[i][0]
+                                counting = False
+
+                # if the highest_id is not visible for 3 seconds change to the second highest id
+                if index == -1 and corners:
+                    if (time.time() > lastSeenHighestIdTime + 3) and len(ids) > 0:
+                        # take the highest id of the list with ids
+                        highest_id = ids[len(ids) - 1][0]
+
+                # if the index of the marker is known calculated the pose of the drone
+                if index is not -1 and highest_id is not -1 and counting is False:
                     lastMarkerTime = timeMillis()
-                    rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, self.markerLength,
+                    rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners,
+                                                                               self.markerLength.get(highest_id),
                                                                                self.cameraMatrix, self.cameraDistortion)
+
                     # Rodrigues: calculated rotation matrix from rotation vector
-                    rmat = cv2.Rodrigues(rvecs[0][0])[0]
+                    rmat = cv2.Rodrigues(rvecs[index][0])[0]
                     # concat rmat and tvecs to make a projection matrix
-                    P = np.c_[rmat, tvecs[0][0]]
+                    P = np.c_[rmat, tvecs[index][0]]
                     # decompose projectionMatrix and retrive the angles
                     # https://shimat.github.io/opencvsharp_2410/html/b268a47c-b24b-aa64-a273-c1b1927b7ec0.htm
                     angles = -cv2.decomposeProjectionMatrix(P)[6] + 180
                     # Don't show the camera processing on the drone/pi
                     if self.working_mode != "pi":
-                        cv2.putText(gray, str(tvecs[0][0]), (10, 60), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
+                        cv2.putText(gray, str(tvecs[index][0]), (10, 60), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
                         cv2.putText(gray, str(angles).replace('[', '').replace(']', ''), (10, 90), font, 1, (0, 0, 0), 2
                                     , cv2.LINE_AA)
                         cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 0, 0), 2, cv2.LINE_AA)
-                        aruco.drawAxis(gray, self.cameraMatrix, self.cameraDistortion, rvecs, tvecs, 0.1)
+                        aruco.drawAxis(gray, self.cameraMatrix, self.cameraDistortion, rvecs[index][0],
+                                       tvecs[index][0], 0.1)
                         cv2.imshow("frame", gray)
 
-                    self.message = self.positionProcessor.process(tvecs[0][0][0], tvecs[0][0][1], tvecs[0][0][2],
-                                                                  angles[0])
+                    self.message = self.positionProcessor.process(tvecs[index][0][0], tvecs[index][0][1],
+                                                                  tvecs[index][0][2],
+                                                                  angles[2])
                     # TODO find nicer way to todo this
                     self.positionLog.info(
-                        str(tvecs[0][0][0]).replace('.', ',') + ";"
-                        + str(tvecs[0][0][1]).replace('.', ',') + ";"
-                        + str(tvecs[0][0][2]).replace('.', ',') + ";"
+                        str(highest_id) + ";"
+                        + str(tvecs[index][0][0]).replace('.', ',') + ";"
+                        + str(tvecs[index][0][1]).replace('.', ',') + ";"
+                        + str(tvecs[index][0][2]).replace('.', ',') + ";"
                         + str(angles[0]).replace('.', ',').replace('[', '').replace(']', '') + ";"
                         + str(angles[1]).replace('.', ',').replace('[', '').replace(']', '') + ";"
                         + str(angles[2]).replace('.', ',').replace('[', '').replace(']', '')
                     )
+                # if the index of the marker is not know send loiter to the drone
                 else:
                     if self.working_mode != "pi":
                         cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
