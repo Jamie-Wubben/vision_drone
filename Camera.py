@@ -109,9 +109,9 @@ class Camera:
         self.logger.info("Start camera and record.")
 
         self.running = True
-        # self.cap = cv2.VideoCapture("FlightMovies/realflight8.avi")
+        self.cap = cv2.VideoCapture("FlightMovies/video1.avi")
 
-        self.cap = cv2.VideoCapture(0)
+        #self.cap = cv2.VideoCapture(0)
         self.logger.info("recording the video feed")
         while self.running:
             self.ret, self.frame = self.cap.read()
@@ -141,6 +141,9 @@ class Camera:
         aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
         font = cv2.FONT_HERSHEY_PLAIN
         parameters = aruco.DetectorParameters_create()
+        parameters.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
+        parameters.cornerRefinementWinSize = 20
+        parameters.cornerRefinementMaxIterations = 60
 
         self.marker_socket.connect(("localhost", 5764))
         self.logger.info("made connection with ardusim")
@@ -202,7 +205,7 @@ class Camera:
                             lastSeenHighestIdTime = time.time()
                             markerSeenCounter = markerSeenCounter + 2
                             index = i
-                            if (markerSeenCounter > processCounter) and counting:
+                            if ((markerSeenCounter > processCounter) and counting) or highest_id is -1:
                                 self.logger.info("changed to new marker")
                                 highest_id = ids[i][0]
                                 counting = False
