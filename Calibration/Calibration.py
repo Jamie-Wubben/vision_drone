@@ -8,11 +8,11 @@ from cv2 import aruco
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-from PIL import Image
+
 
 aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
 # squaresX, squaresY, squareLength, markerLength, dictionary
-board = aruco.CharucoBoard_create(4, 4, 0.05, 0.04, aruco_dict)
+board = aruco.CharucoBoard_create(4, 4, 0.042, 0.0335, aruco_dict)
 font = cv2.FONT_HERSHEY_PLAIN
 
 
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     makeBoard(path,False)
 
     messagebox.showinfo("print board", "The board is saved in: " + path + "/chessboard.jpg \nPlease print this board "
-                                       "\nNormally the squares have are 0.05m long and the markers 0.04m.\n"
+                                       "\nNormally the squares have are 0.042m long and the markers 0.0335m.\n"
                                        "Check this and make sure the dimensions are the same.")
 
     messagebox.showinfo("making pictures", "Now we will take some pictures of the chessboard.\n"
