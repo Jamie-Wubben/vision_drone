@@ -109,9 +109,9 @@ class Camera:
         self.logger.info("Start camera and record.")
 
         self.running = True
-        self.cap = cv2.VideoCapture("FlightMovies/video1.avi")
+        #self.cap = cv2.VideoCapture("FlightMovies/goodFlight2.avi")
 
-        #self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(0)
         self.logger.info("recording the video feed")
         while self.running:
             self.ret, self.frame = self.cap.read()
@@ -173,7 +173,6 @@ class Camera:
                     self.marker_socket.sendall("error\n".encode())
                     self.logger.error("error, uav land")
                     self.find_target_running = False
-                    break
                 time.sleep(0.5)
             else:
                 # check to find target
@@ -259,6 +258,7 @@ class Camera:
                         cv2.putText(gray, "No marker detected", (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
                         cv2.putText(gray, "press q to quit", (10, 450), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
                         cv2.imshow("frame", gray)
+
                     # if the marker is not seen in the last second send loiter
                     if timeMillis() > lastMarkerTime + 1000:
                         self.message = "loiter\n"
