@@ -137,6 +137,9 @@ def checkResults(images):
         # documentation for detectorparameters see
         # https://docs.opencv.org/3.1.0/d5/dae/tutorial_aruco_detection.html
         parameters = aruco.DetectorParameters_create()
+        parameters.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
+        parameters.cornerRefinementWinSize = 20
+        parameters.cornerRefinementMaxIterations = 60
         corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
         if corners:
             rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(corners, 0.185, camera_matrix, distortion)
