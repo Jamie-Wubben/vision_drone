@@ -109,9 +109,9 @@ class Camera:
         self.logger.info("Start camera and record.")
 
         self.running = True
-        self.cap = cv2.VideoCapture("FlightMovies/setup.avi")
+        #self.cap = cv2.VideoCapture("FlightMovies/goodFlight2.avi")
 
-        #self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(0)
         self.logger.info("recording the video feed")
         while self.running:
             self.ret, self.frame = self.cap.read()
