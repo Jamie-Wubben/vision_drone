@@ -2,6 +2,7 @@ import logging
 
 # this logger can be used to log everything that you find important
 
+
 def create_logger():
     logger = logging.getLogger("DRONE VISION")
     ch = logging.StreamHandler()
